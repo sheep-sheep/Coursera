@@ -20,3 +20,27 @@ Reusability matters
 If time is a factor, remove any data related to the event of interest that doesn’t take place prior to the event.
 Ensure that data is preprocessed outside of any cross validation folds.
 10. 0110
+
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# preprocess the data
+def preprocess(df):
+    df.loc[:, 'city']= df['city'].str.upper()
+    df = df[df.city.isin(['DETROIT', 'DET'])]
+    df.loc[:,'total_fine'] = df['fine_amount']+df['admin_fee']+df['state_fee']
+    df.loc[:,'ticket_issued_date'] =pd.to_datetime(df['ticket_issued_date']).dt.date
+    df.loc[:,'hearing_date'] =pd.to_datetime(df['hearing_date']).dt.date
+    df = df[df.compliance.notnull()] if 'compliance' in df.columns else df
+    cols = ['violator_name', 'violation_street_name', 'city', 'violation_code', 'total_fine']
+    cols = cols+['compliance'] if 'compliance' in df.columns else cols
+    return df[cols]
+
+## pick name with:
+#df = pd.read_csv('C:/Users/Yang/Downloads/train.csv' )
+#train_data = preprocess(df)
+#
+#df = pd.read_csv('C:/Users/Yang/Downloads/test.csv' )
+#test_data = preprocess(df)

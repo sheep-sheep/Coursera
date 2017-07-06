@@ -82,3 +82,68 @@ res = pd.Series([data[0] for data in grid_clf_auc.predict_proba(target_data)], i
 #grid_clf = GridSearchCV(clf, param_grid=grid_values)
 #grid_clf.fit(X_train, y_train)
 #res = grid_clf.predict(test_data)
+
+import numpy as np
+import pandas as pd
+
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+cols = [ 'violation_street_name','total_fine']
+# preprocess the data
+def preprocess(df):
+    cols = ['total_fine', 'violation_street_name',] # 'violation_street_name', 'violation_code', 
+    if 'compliance' not in df.columns:
+        cols = cols+['ticket_id']
+    df.loc[:, 'city']= df['city'].str.upper()
+#    df = df[df.city.isin(['DETROIT', 'DET'])] if 'compliance' in df.columns else df
+    df.loc[:,'total_fine'] = df['fine_amount']+df['admin_fee']+df['state_fee']
+#    df.loc[:,'ticket_issued_date'] =pd.to_datetime(df['ticket_issued_date']).dt.date
+#    df.loc[:,'hearing_date'] =pd.to_datetime(df['hearing_date']).dt.date
+    df = df[df.compliance.notnull()] if 'compliance' in df.columns else df
+    df.loc[:, 'violation_street_name']= df.loc[:, 'violation_street_name':'violation_street_name'].apply(LabelEncoder().fit_transform)
+    cols = cols+['compliance'] if 'compliance' in df.columns else cols
+    return df[cols]
+
+df = pd.read_csv('C:/Users/Yang/Downloads/train.csv', encoding='latin1')
+train_data = preprocess(df)
+
+df = pd.read_csv('C:/Users/Yang/Downloads/test.csv', encoding='latin1')
+test_data = preprocess(df)
+target_data = test_data.iloc[:,:-1]
+target_index = test_data.iloc[:,-1]
+
+X = train_data.iloc[:,:-1]
+Y = train_data.iloc[:,-1]
+X_train, X_test, y_train, y_test = train_test_split(X, Y, random_state = 0)
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+#clf = RandomForestClassifier().fit(X_train, y_train)
+#parameters = {'n_estimators':(5, 10, 15, 20), 
+#              'max_depth':[3, 5, 10],}
+#
+#grid_search = GridSearchCV(clf, param_grid=parameters, cv=3, scoring='roc_auc')
+#
+#grid_search.fit(X_train, y_train)
+#res = grid_search.predict(X_test)
+#knn = KNeighborsClassifier(n_neighbors = 5).fit(X_train, y_train)
+#parameters = {'n_neighbors':(5, 10, 15, 20), }
+#grid_search = GridSearchCV(knn, param_grid=parameters, cv=3, scoring='roc_auc')
+clf = SVC(C=1).fit(X_train, y_train)
+parameters = {'C':(0.001,0.01, 0.1, 1,10), }
+grid_search = GridSearchCV(clf, param_grid=parameters,  )#scoring='roc_auc'cv=3,
+grid_search.fit(X_train, y_train)
+res = grid_search.predict(X_test)
+#    clf = DecisionTreeClassifier(max_depth=5)
+#    clf.fit(X_train, y_train)
+#
+from sklearn.metrics import roc_auc_score
+print(roc_auc_score(y_test, res))
+res = pd.Series([data[0] for data in grid_search.predict_proba(target_data)], index = target_index)
+
+
